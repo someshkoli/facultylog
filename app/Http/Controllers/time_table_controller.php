@@ -13,12 +13,13 @@ class time_table_controller extends Controller
     
     public function class_time_table(Request $request,Response $response){
         $time_table = new time_table();
-        $data= $time_table->all()->where(function($query){
-            $query->where('department',$request->all()["department"])
-                  ->where('year',$request->all()['year'])
-                  ->where('division',$request->all()['division']);
-        });
-        return response($data); 
+        $keys = array_keys((array)$request->all());
+        $query=$time_table->all();
+        foreach($keys as $key){
+            $query=$query->where($key,$request->all()[$key]);
+        }
+        echo $query;
+        return response($query); 
     }
 
     public function facultytimetable(Request $request,Response $response){
@@ -28,6 +29,12 @@ class time_table_controller extends Controller
         return response($data); 
     }
 
+    public function faculty_current_time(Request $request,Response $response){
+        $time_table=new time_table();
+        $data=$time_table->all()->where(function($query){
+            $query->where('sdrn',$request->all()['sdrn']); 
+        });
+    }
     
     /**
      * Store a newly created resource in storage.

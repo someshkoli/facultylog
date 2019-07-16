@@ -14,8 +14,9 @@ use Illuminate\Http\Response;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::get('/', function (Request $request) {
+    echo "hello";
+    return response("asdasdas");
 });
 
 
@@ -36,15 +37,14 @@ Route::post('/monitor',function(Request $request){
 
 Route::post('/timetable_view_class','time_table_controller@class_time_table');
 Route::post('/timetable_view_faculty','time_table_controller@facultytimetable');
+Route::post('/get_department','faculty@getdepartment');
+Route::post('/department','faculty@getdepartment');
 
 
 Route::post('/timetable_enter','time_table_controller@store');
 
 
 Route::post('/user',function(Request $request){
-    $data=[
-        "user_type"=>"user_type",
-        "errcode" => "errcode"];
-    return response()->json($data);
+    $keys = array_keys((array)$request->all());
+    return response()->json($keys);
 });
-
