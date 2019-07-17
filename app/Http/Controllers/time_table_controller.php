@@ -6,19 +6,20 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\time_table;
 
-
+use DB;
 class time_table_controller extends Controller
 {
     
     
     public function class_time_table(Request $request,Response $response){
         $time_table = new time_table();
-        $keys = array_keys((array)$request->all());
-        $query=$time_table->all();
+        // echo $request;
+        $keys = array_keys((array)$request->all()['params']);
+        $query=DB::connection($request->all()['college'])->table("time_table")->get();
+
         foreach($keys as $key){
-            $query=$query->where($key,$request->all()[$key]);
+            $query=$query->where($key,$request->all()['params'][$key]);
         }
-        echo $query;
         return response($query); 
     }
 
@@ -44,18 +45,16 @@ class time_table_controller extends Controller
      */
     public function store(Request $request)
     {
-        $table_data = new time_table();
-
-        $table_data->department=Request("department");
-        $table_data->year=Request("year");
-        $table_data->division=Request("division");
-        $table_data->day=Request("day");
-        $table_data->subject=Request("subject");
-        $table_data->sdrn=Request("sdrn");
-        $table_data->end_time=Request("end_time");
-        $table_data->start_time=Request("start_time");
-        $table_data->batch=Request("batch");
-        $table_data->save();
+        $keys = array_keys((array)$request->all()['params']);
+        $time_table=DB::connection($request->all()['college'])->time_table;
+        $data=[];
+       // echo json_encode($time_table);
+        foreach($keys as $key){
+            $temp=[$key => $request->all()['params'][$key]];
+            $data=array_merge($data,$temp);
+        }
+       // echo $data;
+        $time_table::insert($data);
 
         return Response("hello");
     }
