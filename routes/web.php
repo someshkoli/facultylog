@@ -39,6 +39,9 @@ Route::post('/timetable_view_class','time_table_controller@class_time_table');
 Route::post('/timetable_view_faculty','time_table_controller@facultytimetable');
 Route::post('/get_department','faculty@getdepartment');
 Route::post('/department','faculty@getdepartment');
+Route::post('/faculty_info','faculty@get_faculty');
+
+
 
 
 Route::post('/timetable_enter','time_table_controller@store');

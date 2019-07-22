@@ -12,10 +12,10 @@ class time_table_controller extends Controller
     
     
     public function class_time_table(Request $request,Response $response){
-        $time_table = new time_table();
+        $time_table = new time_table($request->all()['college']);
         // echo $request;
         $keys = array_keys((array)$request->all()['params']);
-        $query=DB::connection($request->all()['college'])->table("time_table")->get();
+        $query=$time_table->get();
 
         foreach($keys as $key){
             $query=$query->where($key,$request->all()['params'][$key]);
@@ -46,16 +46,18 @@ class time_table_controller extends Controller
     public function store(Request $request)
     {
         $keys = array_keys((array)$request->all()['params']);
-        $time_table=DB::connection($request->all()['college'])->time_table;
-        $data=[];
-       // echo json_encode($time_table);
-        foreach($keys as $key){
-            $temp=[$key => $request->all()['params'][$key]];
-            $data=array_merge($data,$temp);
-        }
-       // echo $data;
-        $time_table::insert($data);
-
+        $time_table=new time_table($request->all()['college']);
+        $time_table->department=$request->all()['params']['department'];
+        $time_table->start_time=$request->all()['params']['start_time'];
+        $time_table->room=$request->all()['params']['room'];
+        $time_table->division=$request->all()['params']['division'];
+        $time_table->sdrn=$request->all()['params']['sdrn'];
+        $time_table->end_time=$request->all()['params']['end_time'];
+        $time_table->batch=$request->all()['params']['batch'];
+        $time_table->subject=$request->all()['params']['subject'];
+        $time_table->day=$request->all()['params']['day'];
+        $time_table->year=$request->all()['params']['year'];
+        $time_table->save();
         return Response("hello");
     }
 
