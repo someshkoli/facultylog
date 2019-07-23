@@ -15,18 +15,28 @@ class faculty extends Controller
 
     public function get_faculty(Request $request,Response $response){
         //echo (string)$request->all();
-        $data=DB::connection('RAIT')->table('course')->get('Subject_name');
-        $result=array(array());
-        $temp=array();
-        foreach($data as $d){
-            echo $d->Subject_name;
-            array_push($temp,$d->Subject_name);
+        $courses=DB::connection('RAIT')->table('course')->get('Subject_name');
+        $course=array();
+        $faculty=array();
+        $faculties=DB::connection('RAIT')->table('faculty')->select(DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))->get();
+        foreach($courses as $c){
+            array_push($course,$c->Subject_name);
         }
-        array_push($result,$temp);
 
-        
+        foreach($faculties as $f){
+            if($f->name==null){
+                continue;
+            }
+            else{
+            array_push($faculty,$f->name);
 
-        return response($result);
+            }
+        }
+
+        return json_encode([
+            'course'=> $course,
+            'faculty' => $faculty
+        ]);
 
     }
 }
