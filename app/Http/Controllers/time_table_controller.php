@@ -37,6 +37,10 @@ class time_table_controller extends Controller
         });
     }
     
+    public function class_time_table_view(Request $request,Response $response){
+        $time_table=new time_table();
+
+    }
     /**
      * Store a newly created resource in storage.
      *
@@ -45,6 +49,7 @@ class time_table_controller extends Controller
      */
     public function store(Request $request)
     {
+        $sub_short=DB::connection($request->all()['college'])->table('course')->select('Subject_shortname')->where('Subject_name','=',$request->all()['params']['subject'])->get();
         $keys = array_keys((array)$request->all()['params']);
         $time_table=new time_table($request->all()['college']);
         $time_table->department=$request->all()['params']['department'];
@@ -54,7 +59,9 @@ class time_table_controller extends Controller
         $time_table->sdrn=$request->all()['params']['sdrn'];
         $time_table->end_time=$request->all()['params']['end_time'];
         $time_table->batch=$request->all()['params']['batch'];
-        $time_table->subject=$request->all()['params']['subject'];
+      //  $time_table->subject=$request->all()['params']['subject'];
+      // echo json_encode($sub_short);
+        $time_table->subject=$sub_short[0]->Subject_shortname;
         $time_table->day=$request->all()['params']['day'];
         $time_table->year=$request->all()['params']['year'];
         $time_table->save();

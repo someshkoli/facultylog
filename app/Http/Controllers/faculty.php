@@ -15,7 +15,7 @@ class faculty extends Controller
 
     public function get_faculty(Request $request,Response $response){
         //echo (string)$request->all();
-        $courses=DB::connection('RAIT')->table('course')->get('Subject_name');
+        $courses=DB::connection('RAIT')->table('course')->select('Subject_name')->where('Year',"=",$request->all()['params']['year'])->get();
         $course=array();
         $faculty=array();
         $faculties=DB::connection('RAIT')->table('faculty')->select(DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))->get();
