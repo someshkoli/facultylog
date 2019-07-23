@@ -20,16 +20,6 @@ Route::get('/', function (Request $request) {
         'stuffasdasd'=> phpinfo()
     ]);
 });
-
-
-Route::get('/monitor',function(Request $request){
-    $data=[
-        "timetable" => "timetable",
-        "errcode" => "errcode"
-    ];
-    return response()->json($data);
-});
-
 Route::post('/monitor',function(Request $request){
     $data=[
         "errcode" => "errcode"];
@@ -44,6 +34,9 @@ Route::post('/department','faculty@getdepartment');
 Route::post('/faculty_info','faculty@get_faculty');
 Route::post('/timetable_class_view','time_table_controller@class_time_table_view');
 Route::post('/timetable_enter','time_table_controller@store');
+
+
+Route::post('/test','time_table_controller@test');
 
 
 Route::post('/user',function(Request $request){
