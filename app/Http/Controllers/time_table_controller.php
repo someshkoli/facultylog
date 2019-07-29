@@ -15,7 +15,7 @@ class time_table_controller extends Controller
     public function class_time_table(Request $request, Response $response)
     {
         $time_table = new time_table($request->all()['college']);
-        // echo $request;
+        $result = array();
         $keys = array_keys((array) $request->all()['params']);
         $query = DB::connection($request->all()['college'])->table('time_table')->get();
         $data = array();
@@ -40,14 +40,52 @@ class time_table_controller extends Controller
         return response($query);
     }
 
+
     //give faculty timtable to principal
-    public function facultytimetable(Request $request, Response $response)
+    public function faculty_time_table(Request $request, Response $response)
     {
-        $time_table = new time_table();
-        //echo $request->all()['sdrn'];
-        $data = $time_table->all()->where('sdrn', $request->all()['sdrn'])->toJson();
-        return response($data);
+        $result = array();
+        $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        $keys = array_keys((array) $request->all()['params']);
+        $query = DB::connection($request->all()['college'])->table('time_table')->get();
+        $faculty = DB::connection('RAIT')->table('faculty')
+            ->select('sdrn', DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))
+            ->get();
+
+        foreach ($days as $d) {
+            $day1 = [
+                'day' => $d,
+            ];
+
+            foreach ($keys as $key) {
+                if ($request->all()['params'][$key] == "") {
+                    continue;
+                }
+
+                if ($key == "time") {
+                    $query = $query->where('start_time', "<=", $request->all()['params']['time']);
+                    $query = $query->where('end_time', ">=", $request->all()['params']['time']);
+                    continue;
+                }
+                $query = $query->where($key, $request->all()['params'][$key]);
+            }
+            $query = $query->where('day', $d);
+            foreach ($query as $q) {
+                foreach ($faculty as $f) {
+                    if ($f->sdrn == $q->sdrn) {
+                        $q->sdrn = $f->name;
+                    }
+                }
+            }
+            $day1 = array_merge($day1, ['timetable' => $query]);
+            array_push($result, $day1);
+        }
+        return response($result);
     }
+
+
+
+
 
     //give faculty curent time to principal
     public function faculty_current_time(Request $request, Response $response)
@@ -63,10 +101,17 @@ class time_table_controller extends Controller
     //     $time_table = new time_table();
     // }
 
-    public function test(Request $request, Response $response)
+
+
+
+
+
+
+    public function full_class(Request $request, Response $response)
     {
         $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         $final_time_table = array();
+        $sub_short1 = array();
         foreach ($days as $day) {
             $dayd = [
                 'day' => $day
@@ -79,33 +124,47 @@ class time_table_controller extends Controller
                     'time_table.end_time',
                     'time_table.sdrn',
                     'time_table.room',
+                    'time_table.department',
+                    'time_table.year',
+                    'time_table.division',
                     'time_table.batch',
                     DB::raw('concat(faculty.First_name," ",faculty.Last_name) AS name')
                 )
                 ->join('faculty', 'time_table.sdrn', "=", 'faculty.sdrn')
-                ->where('division', "=", $request->all()['params']['division'])
-                ->where('day', $day)
+                ->where('time_table.division', "=", $request->all()['params']['division'])
+                ->where('time_table.department', "=", $request->all()['params']['department'])
+                ->where('time_table.year', "=", $request->all()['params']['year'])
+                ->where('time_table.day', $day)
                 ->get();
-            //echo (string)$day;
-            // response($data);
+            // return $data;
+            $temp = [
+            ];
             foreach ($data as $d) {
-                // echo "213131";
-                // return json_encode($data);
-                $temp = [
-                    $d->start_time . "-" . $d->end_time => [
-                        'subject' => $d->subject,
-                        'class' => $d->room,
-                        'faculty' => $d->name
-                    ]
-                ];
+                if ($d->batch == "ALL") {
+                    $temp = [
+                        $d->start_time . "-" . $d->end_time => $d
+                    ];
+                } else {
+                    array_push($temp,[$d->start_time . "-" . $d->end_time=>$d]);
+                }
                 $dayd = array_merge($dayd, $temp);
-                //return json_encode($dayd);
+                array_push($sub_short1, $d->subject);
             }
 
             array_push($final_time_table, $dayd);
         }
-        return response($final_time_table);
+        $sub_short1 = array_unique($sub_short1);
+        $full_time_table = [
+            "time_table" => $final_time_table,
+            "subjects" => $sub_short1,
+        ];
+        return response($full_time_table);
     }
+
+
+
+
+
 
     //add a new schedule record
     public function store(Request $request)
