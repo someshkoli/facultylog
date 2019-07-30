@@ -136,21 +136,48 @@ class time_table_controller extends Controller
                 ->where('time_table.year', "=", $request->all()['params']['year'])
                 ->where('time_table.day', $day)
                 ->get();
-            // return $data;
-            $temp = [
-            ];
+            $batch_data = DB::connection($request->all()['college'])->table("time_table", "faculty")
+                ->select(
+                    'time_table.subject',
+                    'time_table.day',
+                    'time_table.start_time',
+                    'time_table.end_time',
+                    'time_table.sdrn',
+                    'time_table.room',
+                    'time_table.department',
+                    'time_table.year',
+                    'time_table.division',
+                    'time_table.batch',
+                    DB::raw('concat(faculty.First_name," ",faculty.Last_name) AS name')
+                )
+                ->join('faculty', 'time_table.sdrn', "=", 'faculty.sdrn')
+                ->where('time_table.division', "=", $request->all()['params']['division'])
+                ->where('time_table.department', "=", $request->all()['params']['department'])
+                ->where('time_table.year', "=", $request->all()['params']['year'])
+                ->where('time_table.day', $day)
+                ->where('time_table.batch', "!=", "All")
+                ->get()->toArray();
+            // print_r((array) $batch_data[3]->start_time);
+            $temp = array();
             foreach ($data as $d) {
-                if ($d->batch == "ALL") {
-                    $temp = [
-                        $d->start_time . "-" . $d->end_time => $d
-                    ];
-                } else {
-                    array_push($temp,[$d->start_time . "-" . $d->end_time=>$d]);
+                if ($d->batch != "All") {
+                    continue;
                 }
+                $temp = array_merge($temp, [$d->start_time . "-" . $d->end_time => [
+                    "type" => "All",
+                    "info" => $d,
+                ]]);
                 $dayd = array_merge($dayd, $temp);
                 array_push($sub_short1, $d->subject);
             }
-
+            if (count($batch_data) != 0) {
+                $start_time1 = $batch_data[0]->start_time;
+                $end_time1 = $batch_data[0]->end_time;
+                $dayd = array_merge($dayd, [$start_time1 . "-" . $end_time1 => [
+                    "type" => "batch",
+                    "info" => $batch_data,
+                ]]);
+            }
             array_push($final_time_table, $dayd);
         }
         $sub_short1 = array_unique($sub_short1);
