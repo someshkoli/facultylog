@@ -157,6 +157,14 @@ class time_table_controller extends Controller
                 ->where('time_table.day', $day)
                 ->where('time_table.batch', "!=", "All")
                 ->get()->toArray();
+
+            $time_scale_data = DB::connection($request->all()['college'])->table('time_table')
+                ->where('time_table.division', "=", $request->all()['params']['division'])
+                ->where('time_table.department', "=", $request->all()['params']['department'])
+                ->where('time_table.year', "=", $request->all()['params']['year'])
+                ->where('time_table.day', $day)
+                ->get();
+            $time_scale = array();
             // print_r((array) $batch_data[3]->start_time);
             $temp = array();
             foreach ($data as $d) {
@@ -178,21 +186,22 @@ class time_table_controller extends Controller
                     "info" => $batch_data,
                 ]]);
             }
+            foreach ($time_scale_data as $t) {
+                $time_scale=array_merge($time_scale,[$t->start_time."-".$t->end_time]);
+            }
+            $time_scale=array_unique($time_scale);
             array_push($final_time_table, $dayd);
         }
         $sub_short1 = array_unique($sub_short1);
         $full_time_table = [
             "time_table" => $final_time_table,
             "subjects" => $sub_short1,
+            "time_scale" => "scale"
         ];
         return response($full_time_table);
     }
 
-
-
-
-
-
+    //aosidhaaosijdasa
     //add a new schedule record
     public function store(Request $request)
     {
