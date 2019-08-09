@@ -47,13 +47,16 @@ class time_table_controller extends Controller
         $result = array();
         $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         $keys = array_keys((array) $request->all()['params']);
-        $query = DB::connection($request->all()['college'])->table('time_table')->get();
+        //$query = DB::connection($request->all()['college'])->table('time_table')->get();
         $faculty = DB::connection('RAIT')->table('faculty')
             ->select('sdrn', DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))
             ->get();
 
         foreach ($days as $d) {
-            $day1 = [
+
+           $query = DB::connection($request->all()['college'])->table('time_table')->get();
+
+           $day1 = [
                 'day' => $d,
             ];
 
