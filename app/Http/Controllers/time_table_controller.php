@@ -49,7 +49,7 @@ class time_table_controller extends Controller
         $keys = array_keys((array) $request->all()['params']);
         //$query = DB::connection($request->all()['college'])->table('time_table')->get();
         $faculty = DB::connection('RAIT')->table('faculty')
-            ->select('sdrn', DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))
+            ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
             ->get();
 
         foreach ($days as $d) {
@@ -139,7 +139,28 @@ class time_table_controller extends Controller
                 ->where('time_table.year', "=", $request->all()['params']['year'])
                 ->where('time_table.day', $day)
                 ->get();
-            $batch_data = DB::connection($request->all()['college'])->table("time_table", "faculty")
+            
+            $time_frame=DB::connection($request->all()['college'])->table("time_table")->select('start_time',"end_time")
+                            ->where('batch',"!=","All")
+                            ->where('day',"=",$day)
+                            ->distinct('start_time')
+                            ->get();
+            //
+            // print_r((array) $batch_data[3]->start_time);
+            // $temp = array();
+            // foreach ($data as $d) {
+            //     if ($d->batch != "All") {
+            //         continue;
+            //     }
+            //     $temp = array_merge($temp, [$d->start_time . "-" . $d->end_time => [
+            //         "type" => "All",
+            //         "info" => $d,
+            //     ]]);
+            //     $dayd = array_merge($dayd, $temp);
+            //     array_push($sub_short1, $d->subject);
+            // }
+                foreach($time_frame as $tf){
+                    $batch_data = DB::connection($request->all()['college'])->table("time_table", "faculty")
                 ->select(
                     'time_table.subject',
                     'time_table.day',
@@ -159,34 +180,21 @@ class time_table_controller extends Controller
                 ->where('time_table.year', "=", $request->all()['params']['year'])
                 ->where('time_table.day', $day)
                 ->where('time_table.batch', "!=", "All")
+                ->where('start_time',"=",$tf->start_time)
                 ->get()->toArray();
-            // print_r((array) $batch_data[3]->start_time);
-            $temp = array();
-            foreach ($data as $d) {
-                if ($d->batch != "All") {
-                    continue;
-                }
-                $temp = array_merge($temp, [$d->start_time . "-" . $d->end_time => [
-                    "type" => "All",
-                    "info" => $d,
-                ]]);
-                $dayd = array_merge($dayd, $temp);
-                array_push($sub_short1, $d->subject);
-            }
-            if (count($batch_data) != 0) {
-                $start_time1 = $batch_data[0]->start_time;
-                $end_time1 = $batch_data[0]->end_time;
-                $dayd = array_merge($dayd, [$start_time1 . "-" . $end_time1 => [
+                
+                $dayd = array_merge($dayd, [$tf->start_time . "-" . $tf->end_time => [
                     "type" => "batch",
                     "info" => $batch_data,
                 ]]);
-            }
+                }
             array_push($final_time_table, $dayd);
         }
         $sub_short1 = array_unique($sub_short1);
         $full_time_table = [
             "time_table" => $final_time_table,
             "subjects" => $sub_short1,
+            "test" => $time_frame
         ];
         return response($full_time_table);
     }

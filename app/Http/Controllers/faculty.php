@@ -45,7 +45,7 @@ class faculty extends Controller
         $courses = DB::connection('RAIT')->table('course')->select('Subject_name')->where('Year', "=", $request->all()['params']['year'])->get();
         $course = array();
         $faculty = array();
-        $faculties = DB::connection('RAIT')->table('faculty')->select('sdrn', DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))->get();
+        $faculties = DB::connection('RAIT')->table('faculty')->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))->get();
         foreach ($courses as $c) {
             array_push($course, $c->Subject_name);
         }
