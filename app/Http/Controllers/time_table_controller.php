@@ -101,21 +101,16 @@ class time_table_controller extends Controller
     //     $time_table = new time_table();
     // }
 
-
-
-
-
-
-
     public function full_class(Request $request, Response $response)
     {
         $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         $final_time_table = array();
-        $sub_short1 = array();
+        $sub_short = array();
         foreach ($days as $day) {
             $dayd = [
                 'day' => $day
             ];
+            // get data of non practical times
             $data = DB::connection($request->all()['college'])->table("time_table", "faculty")
                 ->select(
                     'time_table.subject',
@@ -135,67 +130,67 @@ class time_table_controller extends Controller
                 ->where('time_table.department', "=", $request->all()['params']['department'])
                 ->where('time_table.year', "=", $request->all()['params']['year'])
                 ->where('time_table.day', $day)
+                ->where('time_table.batch', "All")
                 ->get();
-            $batch_data = DB::connection($request->all()['college'])->table("time_table", "faculty")
-                ->select(
-                    'time_table.subject',
-                    'time_table.day',
-                    'time_table.start_time',
-                    'time_table.end_time',
-                    'time_table.sdrn',
-                    'time_table.room',
-                    'time_table.department',
-                    'time_table.year',
-                    'time_table.division',
-                    'time_table.batch',
-                    DB::raw('concat(faculty.First_name," ",faculty.Last_name) AS name')
-                )
-                ->join('faculty', 'time_table.sdrn', "=", 'faculty.sdrn')
-                ->where('time_table.division', "=", $request->all()['params']['division'])
-                ->where('time_table.department', "=", $request->all()['params']['department'])
-                ->where('time_table.year', "=", $request->all()['params']['year'])
-                ->where('time_table.day', $day)
-                ->where('time_table.batch', "!=", "All")
-                ->get()->toArray();
-
-            $time_scale_data = DB::connection($request->all()['college'])->table('time_table')
-                ->where('time_table.division', "=", $request->all()['params']['division'])
-                ->where('time_table.department', "=", $request->all()['params']['department'])
-                ->where('time_table.year', "=", $request->all()['params']['year'])
-                ->where('time_table.day', $day)
-                ->get();
-            $time_scale = array();
-            // print_r((array) $batch_data[3]->start_time);
-            $temp = array();
+            $temp_day_data = array();
             foreach ($data as $d) {
                 if ($d->batch != "All") {
                     continue;
                 }
-                $temp = array_merge($temp, [$d->start_time . "-" . $d->end_time => [
+                $temp_day_data = array_merge($temp_day_data, [$d->start_time . "-" . $d->end_time => [
                     "type" => "All",
                     "info" => $d,
                 ]]);
-                $dayd = array_merge($dayd, $temp);
-                array_push($sub_short1, $d->subject);
+                $dayd = array_merge($dayd, $temp_day_data);
+                array_push($sub_short, $d->subject);
             }
-            if (count($batch_data) != 0) {
-                $start_time1 = $batch_data[0]->start_time;
-                $end_time1 = $batch_data[0]->end_time;
-                $dayd = array_merge($dayd, [$start_time1 . "-" . $end_time1 => [
+            //ends here
+
+            // get data of practical times
+            $time_scale = DB::connection($request->all()['college'])->table('time_table')->select('start_time', 'end_time')
+                ->where('division', "=", $request->all()['params']['division'])
+                ->where('department', "=", $request->all()['params']['department'])
+                ->where('year', "=", $request->all()['params']['year'])
+                ->where('day', $day)
+                ->where('batch', "!=", "All")
+                ->distinct('start_time')
+                ->get();
+            foreach ($time_scale as $ts) {
+                $batch_data = DB::connection($request->all()['college'])->table("time_table", "faculty")
+                    ->select(
+                        'time_table.subject',
+                        'time_table.day',
+                        'time_table.start_time',
+                        'time_table.end_time',
+                        'time_table.sdrn',
+                        'time_table.room',
+                        'time_table.department',
+                        'time_table.year',
+                        'time_table.division',
+                        'time_table.batch',
+                        DB::raw('concat(faculty.First_name," ",faculty.Last_name) AS name')
+                    )
+                    ->join('faculty', 'time_table.sdrn', "=", 'faculty.sdrn')
+                    ->where('time_table.division', "=", $request->all()['params']['division'])
+                    ->where('time_table.department', "=", $request->all()['params']['department'])
+                    ->where('time_table.year', "=", $request->all()['params']['year'])
+                    ->where('time_table.day', $day)
+                    ->where('time_table.start_time', $ts->start_time)
+                    ->get()->toArray();
+                $temp_batch_day_data = [$ts->start_time . "-" . $ts->end_time => [
                     "type" => "batch",
                     "info" => $batch_data,
-                ]]);
+                ]];
+                $dayd = array_merge($dayd, $temp_batch_day_data);
+                array_push($sub_short, "Practicals");
             }
-            foreach ($time_scale_data as $t) {
-                $time_scale=array_merge($time_scale,[$t->start_time."-".$t->end_time]);
-            }
-            $time_scale=array_unique($time_scale);
+            //ends here
             array_push($final_time_table, $dayd);
         }
-        $sub_short1 = array_unique($sub_short1);
+        $sub_short = array_unique($sub_short);
         $full_time_table = [
             "time_table" => $final_time_table,
-            "subjects" => $sub_short1,
+            "subjects" => $sub_short,
             "time_scale" => "scale"
         ];
         return response($full_time_table);
