@@ -45,23 +45,22 @@ class time_table_controller extends Controller
     public function faculty_time_table(Request $request, Response $response)
     {
         $result = array();
-        $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "SaturdayOdd","SaturdayEven"];
         $keys = array_keys((array) $request->all()['params']);
-        $query = DB::connection($request->all()['college'])->table('time_table')->get();
+        
         $faculty = DB::connection('RAIT')->table('faculty')
-            ->select('sdrn', DB::raw('concat(First_name," ",Middle_name," ",Last_name) AS name'))
-            ->get();
+        ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
+        ->get();
 
         foreach ($days as $d) {
+            $query = DB::connection($request->all()['college'])->table('time_table')->get();
             $day1 = [
                 'day' => $d,
             ];
-
             foreach ($keys as $key) {
-                if ($request->all()['params'][$key] == "") {
-                    continue;
+		if ($request->all()['params'][$key] == "") {
+            continue;
                 }
-
                 if ($key == "time") {
                     $query = $query->where('start_time', "<=", $request->all()['params']['time']);
                     $query = $query->where('end_time', ">=", $request->all()['params']['time']);
@@ -82,10 +81,10 @@ class time_table_controller extends Controller
         }
         return response($result);
     }
+    
+    
 
-
-
-
+    
 
     //give faculty curent time to principal
     public function faculty_current_time(Request $request, Response $response)
@@ -95,24 +94,24 @@ class time_table_controller extends Controller
             $query->where('sdrn', $request->all()['sdrn']);
         });
     }
-
+    
     // public function class_time_table_view(Request $request, Response $response)
     // {
-    //     $time_table = new time_table();
-    // }
-
-    public function full_class(Request $request, Response $response)
-    {
-        $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        $final_time_table = array();
-        $sub_short = array();
-        foreach ($days as $day) {
-            $dayd = [
-                'day' => $day
-            ];
-            // get data of non practical times
+        //     $time_table = new time_table();
+        // }
+        
+        public function full_class(Request $request, Response $response)
+        {
+            $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "SaturdayOdd","SaturdayEven"];
+            $final_time_table = array();
+            $sub_short = array();
+            foreach ($days as $day) {
+                $dayd = [
+                    'day' => $day
+                ];
+                // get data of non practical times
             $data = DB::connection($request->all()['college'])->table("time_table", "faculty")
-                ->select(
+            ->select(
                     'time_table.subject',
                     'time_table.day',
                     'time_table.start_time',
@@ -187,11 +186,39 @@ class time_table_controller extends Controller
             //ends here
             array_push($final_time_table, $dayd);
         }
+        // create header
+        $header=array();
+        $time=array();
+        array_push($header,(array)[
+            "text" => "Day/Time",
+            "align" => "center",
+            "sortable" => false,
+            "value" => "day"]);
+        $time_scale_header = DB::connection($request->all()['college'])->table('time_table')->select('start_time', 'end_time')
+                ->where('division', "=", $request->all()['params']['division'])
+                ->where('department', "=", $request->all()['params']['department'])
+                ->where('year', "=", $request->all()['params']['year'])
+                ->distinct('start_time')
+                ->orderBy('start_time')
+                ->get()
+                ->toArray();
+        foreach($time_scale_header as $tsh){
+            array_push($header,(array)[
+                "text" => substr($tsh->start_time,0,5)."-".substr($tsh->end_time,0,5),
+                "sortable" => false,
+                "value" => $tsh->start_time."-".$tsh->end_time,
+                "align" => "center"]);
+            array_push($time,$tsh->start_time."-".$tsh->end_time);
+        }
+        // ends here
         $sub_short = array_unique($sub_short);
         $full_time_table = [
             "time_table" => $final_time_table,
             "subjects" => $sub_short,
-            "time_scale" => "scale"
+            "format"=>[
+                "header" => $header,
+                "time" => $time
+            ]
         ];
         return response($full_time_table);
     }
