@@ -104,6 +104,7 @@ class time_table_controller extends Controller
         {
             $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "SaturdayOdd","SaturdayEven"];
             $final_time_table = array();
+            $test_final_table=array();
             $sub_short = array();
             foreach ($days as $day) {
                 $dayd = [
@@ -144,7 +145,23 @@ class time_table_controller extends Controller
                 array_push($sub_short, $d->subject);
             }
             //ends here
-
+            // // test function 
+            // $test_day_data=array();
+            // foreach($data as $d){
+            //     if($test_day_data[$d->start_time . "-" . $d->end_time]){
+            //         array_push($test_day_data[$d->start_time . "-" . $d->end_time]["info"],$d);
+            //     }
+            //     else{
+            //         $test_day_data=[
+            //             $d->start_time . "-" . $d->end_time => [
+            //                 "type" => "All",
+            //                 "info" => $d,
+            //             ],
+            //         ];
+            //     }
+            // }
+            // array_push($test_final_table,$test_day_data);
+            // test function ends
             // get data of practical times
             $time_scale = DB::connection($request->all()['college'])->table('time_table')->select('start_time', 'end_time')
                 ->where('division', "=", $request->all()['params']['division'])
@@ -218,8 +235,9 @@ class time_table_controller extends Controller
             "format"=>[
                 "header" => $header,
                 "time" => $time
-            ]
-        ];
+            ],
+            "test" => $test_final_table
+        ]; 
         return response($full_time_table);
     }
 

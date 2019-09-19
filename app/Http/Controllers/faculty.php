@@ -42,7 +42,10 @@ class faculty extends Controller
     public function get_faculty(Request $request, Response $response)
     {
         //echo (string)$request->all();
-        $courses = DB::connection('RAIT')->table('course')->select('Subject_name')->where('Year', "=", $request->all()['params']['year'])->get();
+        $courses = DB::connection('RAIT')->table('course')->select('Subject_name')
+            ->where('Year', "=", $request->all()['params']['year'])
+            ->where('Department','=',$request->all()['params']['department'])
+            ->get();
         $course = array();
         $faculty = array();
         $faculties = DB::connection('RAIT')->table('faculty')->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))->get();
