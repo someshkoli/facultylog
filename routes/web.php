@@ -1,5 +1,5 @@
 <?php
-//use Illuminate\Routing\Route;
+// use Illuminate\Routing\Route;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -20,7 +20,7 @@ Route::get('/', function (Request $request) {
         'stuffasdasd'=> phpinfo()
     ]);
 });
-Route::post('/monitor',function(Request $request){
+Route::get('/monitor',function(Request $request){
     $data=[
         "errcode" => "errcode"];
     return response()->json($data);
@@ -38,6 +38,7 @@ Route::post('/timetable_class_view','time_table_controller@class_time_table_view
 Route::post('/timetable_enter','time_table_controller@store');
 Route::post('/timetable_record_delete','time_table_controller@destroy');
 Route::post('/full_class','time_table_controller@full_class');
+Route::post('/print_time_table','time_table_controller@print_time_table');
 
 
 Route::post('/user',function(Request $request){

@@ -50,7 +50,7 @@ class faculty extends Controller
         $faculty = array();
         $faculties = DB::connection('RAIT')->table('faculty')
             ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
-            ->where('Department', '=', $request . all()['params']['department'])
+            ->where('Department', '=', $request->all()['params']['department'])
             ->get();
         foreach ($courses as $c) {
             array_push($course, $c->Subject_name);
