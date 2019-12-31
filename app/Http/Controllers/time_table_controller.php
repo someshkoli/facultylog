@@ -95,7 +95,7 @@ class time_table_controller extends Controller
             ->get();
 
         foreach ($days as $d) {
-            $query = DB::connection($request->all()['college'])->table('time_table')->get();
+            $query = DB::connection($request->all()['college'])->table('time_table')->orderBy('start_time')->get();
             $day1 = [
                 'day' => $d,
             ];
@@ -126,19 +126,27 @@ class time_table_controller extends Controller
                 ];
             //converrt to timetable format
             foreach ($query as $q) {
-                if (array_key_exists($q->start_time . "||" . $q->end_time, $print_row)) {
-                    $print_row[$q->start_time . "||" . $q->end_time] = $print_row[$q->start_time . "||" . $q->end_time] . '\n\n' .
-                        $q->subject . "\n" .
-                        $q->sdrn . "\n" .
+                $fac_name = explode(" ", $q->sdrn);
+                $abbvr = "";
+
+                foreach ($fac_name as $w) {
+                    $abbvr .= $w[0];
+                }
+                $fac_name_abvr=array();
+                array_push($fac_name_abvr,[$q->sdrn => $abbvr]);
+                if (array_key_exists($q->start_time . "-\n" . $q->end_time, $print_row)) {
+                    $print_row[$q->start_time . "-\n" . $q->end_time] = $print_row[$q->start_time . "-\n" . $q->end_time] . "\n" .
+                        $q->subject . "/" .
+                        $abbvr . "|" .
                         $q->year . "/" .
                         $q->division . "-" .
                         $q->batch . "/" .
-                        $q->room;
+                        $q->room . "\n";
                 } else {
-                    $print_row[$q->start_time . "||" . $q->end_time] =
-                        $q->subject . "\n" .
-                        $q->sdrn . "\n" .
-                        $q->year . "/" .
+                    $print_row[$q->start_time . "-\n" . $q->end_time] =
+                        $q->subject . "/" .
+                        $abbvr . "|" .
+                        $q->year . "|" .
                         $q->division . "-" .
                         $q->batch . "/" .
                         $q->room;
@@ -146,13 +154,14 @@ class time_table_controller extends Controller
             }
             array_push($print_data, $print_row);
         }
+        // return Response($print_data);
 
         //===============generating csv here==================
         //do not alter this part if you have no idea how it works
         //still if want to alter just remove everything and start from scartch
         //================generating csv here=================
         # Generate CSV data from array
-        $file_name = "new_csv.csv";
+        $file_name = $request->all()['params']['department'] . "_" . $request->all()['params']['year'] . "_" . $request->all()['params']['division'] . ".csv";
         if (file_exists($file_name)) {
             unlink($file_name);
         } else {
@@ -172,8 +181,11 @@ class time_table_controller extends Controller
         $headers = array(
             'Content-Type' => 'text/csv',
         );
+        //=============================================
+        //end of generating csv
+        //=============================================
+
         return \Response::download($file_name, 'time_table.csv', $headers);
-        return response("hello");
     }
 
     //give faculty curent time to principal
@@ -331,8 +343,22 @@ class time_table_controller extends Controller
 
     //aosidhaaosijdasa
     //add a new schedule record
-    public function store(Request $request)
+    public function store(Request $request, Response $response)
     {
+        $check_exist = DB::connection($request->all()['college'])
+            ->table('time_table')
+            ->where('department', $request->all()['params']['department'])
+            ->where('year', $request->all()['params']['year'])
+            ->where('division', $request->all()['params']['division'])
+            ->where('start_time', $request->all()['params']['start_time'])
+            ->where('end_time', $request->all()['params']['end_time'])
+            ->where('day', $request->all()['params']['day'])
+            ->where('room', $request->all()['params']['room'])
+            ->where('batch', $request->all()['params']['batch'])
+            ->get();
+        if (count($check_exist) != 0) {
+            return Response(["error" => "This slot is already in use!"]);
+        }
         $sub_short = DB::connection($request->all()['college'])
             ->table('course')
             ->select('Subject_shortname')
