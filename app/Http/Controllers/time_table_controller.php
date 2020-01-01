@@ -83,7 +83,7 @@ class time_table_controller extends Controller
     }
 
     //printing timetable
-    public function print_time_table(Request $request, Response $response)
+    public function print_time_table_room(Request $request, Response $response)
     {
         $result = array();
         $print_data = array();
@@ -93,12 +93,7 @@ class time_table_controller extends Controller
         $faculty = DB::connection('RAIT')->table('faculty')
             ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
             ->get();
-        $courses = DB::connection($request->all()['college'])->table('course')
-            ->select('Subject_name', 'Subject_shortname')
-            ->where("year", $request->all()['params']['year'])
-            ->where("department", $request->all()['params']['department'])
-            ->get()->toArray();
-        // print_r($courses);
+        $time_slot = array();
         foreach ($days as $d) {
             $query = DB::connection($request->all()['college'])->table('time_table')
                 ->orderBy('start_time')
@@ -143,7 +138,134 @@ class time_table_controller extends Controller
                     array_push($fac_name_abvr, strtoupper($abbvr) . '  -  ' . strtoupper($q->sdrn));
                 }
                 //=======================================================
-
+                array_push($time_slot, $q->start_time . "-\n" . $q->end_time);
+                if (array_key_exists($q->start_time . "-\n" . $q->end_time, $print_row)) {
+                    $print_row[$q->start_time . "-\n" . $q->end_time] = $print_row[$q->start_time . "-\n" . $q->end_time] . "\n" .
+                        // $q->subject . "/" .
+                        // $abbvr . "/" .
+                        $q->year . "/" .
+                        $q->division . "-" .
+                        $q->batch . "";
+                    // $q->room;
+                } else {
+                    $print_row[$q->start_time . "-\n" . $q->end_time] =
+                        // $q->subject . "/" .
+                        // $abbvr . "/" .
+                        $q->year . "/" .
+                        $q->division . "-" .
+                        $q->batch . "";
+                    // $q->room;
+                }
+            }
+            array_push($print_data, $print_row);
+        }
+        $time_slot = array_unique($time_slot);
+        foreach ($print_data as &$pd) {
+            foreach ($time_slot as $t) {
+                if (array_key_exists($t, $pd)) {
+                    continue;
+                } else {
+                    $pd[$t] = " ";
+                    // array_merge($pd, [$t => ""]);
+                    // print_r($pd);
+                }
+            }
+        }
+        //===============generating csv here==================
+        //do not alter this part if you have no idea how it works
+        //still if want to alter just remove everything and start from scartch
+        //================generating csv here=================
+        # Generate CSV data from array
+        $file_name = "Time_table_".$request->all()['params']['room'] . ".csv";
+        $file_path = storage_path() . "/app/public/" . $file_name;
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        } else {
+            // echo ("$file_pointer has been deleted");  
+        }
+        // print_r($print_data);
+        $fh = fopen($file_path, 'a+');
+        fputcsv($fh, ["", "", "", "RAMRAO ADIK INSTITUTE OF TECHNOLOGY", "", "", "", "", "", $request->all()['params']['room']]);
+        fputcsv($fh, ["", "", "", "TIME TABLE FOR EVEN SEMESTER 2019-2020"]);
+        fputcsv($fh, array_keys(current($print_data)));
+        foreach ($print_data as $row) {
+            fputcsv($fh, $row);
+        }
+        fputcsv($fh, ["", "", "", ""]);
+        fputcsv($fh, ["", "", "", ""]);
+        fputcsv($fh, ["", "", "", "", "", "Principal", ""]);
+        rewind($fh);
+        fclose($fh);
+        $headers = array(
+            'Content-Type' => 'text/csv',
+        );
+        //=============================================
+        //end of generating csv
+        //=============================================
+        return Storage::download($file_name, $file_name, $headers);
+        // return response("hello");
+    }
+    public function print_time_table_class(Request $request, Response $response)
+    {
+        $result = array();
+        $print_data = array();
+        $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "SaturdayOdd", "SaturdayEven"];
+        $keys = array_keys((array) $request->all()['params']);
+        $fac_name_abvr = array();
+        $faculty = DB::connection('RAIT')->table('faculty')
+            ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
+            ->get();
+        $courses = DB::connection($request->all()['college'])->table('course')
+            ->select('Subject_name', 'Subject_shortname')
+            ->where("year", $request->all()['params']['year'])
+            ->where("department", $request->all()['params']['department'])
+            ->get()->toArray();
+        $time_slot = array();
+        foreach ($days as $d) {
+            $query = DB::connection($request->all()['college'])->table('time_table')
+                ->orderBy('start_time')
+                ->get();
+            $day1 = [
+                'day' => $d,
+            ];
+            //retrieves key for filtering purpose
+            foreach ($keys as $key) {
+                if ($request->all()['params'][$key] == "") {
+                    continue;
+                }
+                if ($key == "time") {
+                    $query = $query->where('start_time', "<=", $request->all()['params']['time']);
+                    $query = $query->where('end_time', ">=", $request->all()['params']['time']);
+                    continue;
+                }
+                $query = $query->where($key, $request->all()['params'][$key]);
+            }
+            $query = $query->where('day', $d);
+            // convert sdrn to faculty name
+            foreach ($query as $q) {
+                foreach ($faculty as $f) {
+                    if ($f->sdrn == $q->sdrn) {
+                        $q->sdrn = $f->name;
+                    }
+                }
+            }
+            $print_row =
+                [
+                    "day" => $d,
+                ];
+            //converrt to timetable printing format
+            foreach ($query as $q) {
+                //==============converting names to abbvr================
+                $fac_name = explode(" ", $q->sdrn);
+                $abbvr = "";
+                foreach ($fac_name as $w) {
+                    $abbvr .= strtoupper(substr($w, 0, 1));
+                }
+                if (strcmp($q->sdrn, "Break ") != 0) {
+                    array_push($fac_name_abvr, strtoupper($abbvr) . '  -  ' . strtoupper($q->sdrn));
+                }
+                //=======================================================
+                array_push($time_slot, $q->start_time . "-\n" . $q->end_time);
                 if (array_key_exists($q->start_time . "-\n" . $q->end_time, $print_row)) {
                     $print_row[$q->start_time . "-\n" . $q->end_time] = $print_row[$q->start_time . "-\n" . $q->end_time] . "\n" .
                         $q->subject . "/" .
@@ -164,12 +286,24 @@ class time_table_controller extends Controller
             }
             array_push($print_data, $print_row);
         }
+        $time_slot = array_unique($time_slot);
+        foreach ($print_data as &$pd) {
+            foreach ($time_slot as $t) {
+                if (array_key_exists($t, $pd)) {
+                    continue;
+                } else {
+                    $pd[$t] = " ";
+                    // array_merge($pd, [$t => ""]);
+                    // print_r($pd);
+                }
+            }
+        }
         //===============generating csv here==================
         //do not alter this part if you have no idea how it works
         //still if want to alter just remove everything and start from scartch
         //================generating csv here=================
         # Generate CSV data from array
-        $file_name = $request->all()['params']['department'] . "_" . $request->all()['params']['year'] . "_" . $request->all()['params']['division'] . ".csv";
+        $file_name = "Time_table_".$request->all()['params']['department'] . "_" . $request->all()['params']['year'] . "_" . $request->all()['params']['division'] . ".csv";
         $file_path = storage_path() . "/app/public/" . $file_name;
         if (file_exists($file_path)) {
             unlink($file_path);
@@ -179,7 +313,7 @@ class time_table_controller extends Controller
         // print_r($print_data);
         $fh = fopen($file_path, 'a+');
         fputcsv($fh, ["", "", "", "RAMRAO ADIK INSTITUTE OF TECHNOLOGY", "", "", "", $request->all()['params']['year']]);
-        fputcsv($fh, ["", "", "", "TIME TABLE FOR _SEM_ SEMESTER 2019-2020", "", "", "", $request->all()['params']['division']]);
+        fputcsv($fh, ["", "", "", "TIME TABLE FOR EVEN SEMESTER 2019-2020", "", "", "", $request->all()['params']['division']]);
         fputcsv($fh, array_keys(current($print_data)));
         foreach ($print_data as $row) {
             fputcsv($fh, $row);
@@ -189,8 +323,135 @@ class time_table_controller extends Controller
             fputcsv($fh, ["", "", $row]);
         }
         foreach ($courses as $course) {
-            fputcsv($fh, ["", "", "",$course->Subject_shortname.'  -  '.$course->Subject_name]);
+            fputcsv($fh, ["", "", "", $course->Subject_shortname . '  -  ' . $course->Subject_name]);
         }
+        fputcsv($fh, ["", "", "Head of Department", "", "", "Principal"]);
+        rewind($fh);
+        fclose($fh);
+        $headers = array(
+            'Content-Type' => 'text/csv',
+        );
+        //=============================================
+        //end of generating csv
+        //=============================================
+        return Storage::download($file_name, $file_name, $headers);
+        // return response("hello");
+    }
+    public function print_time_table_faculty(Request $request, Response $response)
+    {
+        $result = array();
+        $print_data = array();
+        $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "SaturdayOdd", "SaturdayEven"];
+        $keys = array_keys((array) $request->all()['params']);
+        $fac_name_abvr = array();
+        $faculty = DB::connection('RAIT')->table('faculty')
+            ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
+            ->get();
+        $time_slot = array();
+        $faculty_name = "";
+        foreach ($days as $d) {
+            $query = DB::connection($request->all()['college'])->table('time_table')
+                ->orderBy('start_time')
+                ->get();
+            $day1 = [
+                'day' => $d,
+            ];
+            //retrieves key for filtering purpose
+            foreach ($keys as $key) {
+                if ($request->all()['params'][$key] == "") {
+                    continue;
+                }
+                if ($key == "time") {
+                    $query = $query->where('start_time', "<=", $request->all()['params']['time']);
+                    $query = $query->where('end_time', ">=", $request->all()['params']['time']);
+                    continue;
+                }
+                $query = $query->where($key, $request->all()['params'][$key]);
+            }
+            $query = $query->where('day', $d);
+            // convert sdrn to faculty name
+            foreach ($query as $q) {
+                foreach ($faculty as $f) {
+                    if ($f->sdrn == $q->sdrn) {
+                        $q->sdrn = $f->name;
+                        $faculty_name = $f->name;
+                    }
+                }
+            }
+            $print_row =
+                [
+                    "day" => $d,
+                ];
+            //converrt to timetable printing format
+            foreach ($query as $q) {
+                //==============converting names to abbvr================
+                $fac_name = explode(" ", $q->sdrn);
+                $abbvr = "";
+                foreach ($fac_name as $w) {
+                    $abbvr .= strtoupper(substr($w, 0, 1));
+                }
+                if (strcmp($q->sdrn, "Break ") != 0) {
+                    array_push($fac_name_abvr, strtoupper($abbvr) . '  -  ' . strtoupper($q->sdrn));
+                }
+                //=======================================================
+                array_push($time_slot, $q->start_time . "-\n" . $q->end_time);
+                if (array_key_exists($q->start_time . "-\n" . $q->end_time, $print_row)) {
+                    $print_row[$q->start_time . "-\n" . $q->end_time] = $print_row[$q->start_time . "-\n" . $q->end_time] . "\n" .
+                        $q->subject . "/" .
+                        // $abbvr . "/" .
+                        $q->year . "/" .
+                        $q->division . "-" .
+                        $q->batch . "/" .
+                        $q->room;
+                } else {
+                    $print_row[$q->start_time . "-\n" . $q->end_time] =
+                        $q->subject . "/" .
+                        // $abbvr . "/" .
+                        $q->year . "/" .
+                        $q->division . "-" .
+                        $q->batch . "/" .
+                        $q->room;
+                }
+            }
+            array_push($print_data, $print_row);
+        }
+        $time_slot = array_unique($time_slot);
+        foreach ($print_data as &$pd) {
+            foreach ($time_slot as $t) {
+                if (array_key_exists($t, $pd)) {
+                    continue;
+                } else {
+                    $pd[$t] = " ";
+                    // array_merge($pd, [$t => ""]);
+                    // print_r($pd);
+                }
+            }
+        }
+        // print_r($print_data);
+
+        //===============generating csv here==================
+        //do not alter this part if you have no idea how it works
+        //still if want to alter just remove everything and start from scartch
+        //================generating csv here=================
+        # Generate CSV data from array
+        // $file_name = $request->all()['params']['department'] . "_" . $request->all()['params']['year'] . "_" . $request->all()['params']['division'] . ".csv";
+        $file_name ="Time_table_".$faculty_name. ".csv";
+        $file_path = storage_path() . "/app/public/" . $file_name;
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        } else {
+            // echo ("$file_pointer has been deleted");  
+        }
+        $fh = fopen($file_path, 'a+');
+        fputcsv($fh, ["", "", "", "RAMRAO ADIK INSTITUTE OF TECHNOLOGY", "", "", "", $faculty_name]);
+        fputcsv($fh, ["", "", "", "TIME TABLE FOR EVEN SEMESTER 2019-2020"]);
+        fputcsv($fh, array_keys(current($print_data)));
+        foreach ($print_data as $row) {
+            fputcsv($fh, $row);
+        }
+        fputcsv($fh, ["", "", "", "", "", "", "", ""]);
+        fputcsv($fh, ["", "", "", "", "", "", "", ""]);
+        fputcsv($fh, ["", "", "", "", "",  "Principal"]);
         rewind($fh);
         fclose($fh);
         $headers = array(
