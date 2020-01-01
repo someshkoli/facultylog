@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 use App\time_table;
-
 
 class time_table_controller extends Controller
 {
@@ -89,13 +89,20 @@ class time_table_controller extends Controller
         $print_data = array();
         $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "SaturdayOdd", "SaturdayEven"];
         $keys = array_keys((array) $request->all()['params']);
-
+        $fac_name_abvr = array();
         $faculty = DB::connection('RAIT')->table('faculty')
             ->select('sdrn', DB::raw('concat(First_name," ",Last_name) AS name'))
             ->get();
-
+        $courses = DB::connection($request->all()['college'])->table('course')
+            ->select('Subject_name', 'Subject_shortname')
+            ->where("year", $request->all()['params']['year'])
+            ->where("department", $request->all()['params']['department'])
+            ->get()->toArray();
+        // print_r($courses);
         foreach ($days as $d) {
-            $query = DB::connection($request->all()['college'])->table('time_table')->orderBy('start_time')->get();
+            $query = DB::connection($request->all()['college'])->table('time_table')
+                ->orderBy('start_time')
+                ->get();
             $day1 = [
                 'day' => $d,
             ];
@@ -124,57 +131,65 @@ class time_table_controller extends Controller
                 [
                     "day" => $d,
                 ];
-            //converrt to timetable format
+            //converrt to timetable printing format
             foreach ($query as $q) {
+                //==============converting names to abbvr================
                 $fac_name = explode(" ", $q->sdrn);
                 $abbvr = "";
-
                 foreach ($fac_name as $w) {
-                    $abbvr .= $w[0];
+                    $abbvr .= strtoupper(substr($w, 0, 1));
                 }
-                $fac_name_abvr=array();
-                array_push($fac_name_abvr,[$q->sdrn => $abbvr]);
+                if (strcmp($q->sdrn, "Break ") != 0) {
+                    array_push($fac_name_abvr, strtoupper($abbvr) . '  -  ' . strtoupper($q->sdrn));
+                }
+                //=======================================================
+
                 if (array_key_exists($q->start_time . "-\n" . $q->end_time, $print_row)) {
                     $print_row[$q->start_time . "-\n" . $q->end_time] = $print_row[$q->start_time . "-\n" . $q->end_time] . "\n" .
                         $q->subject . "/" .
-                        $abbvr . "|" .
-                        $q->year . "/" .
-                        $q->division . "-" .
+                        $abbvr . "/" .
+                        // $q->year . "/" .
+                        // $q->division . "-" .
                         $q->batch . "/" .
-                        $q->room . "\n";
+                        $q->room;
                 } else {
                     $print_row[$q->start_time . "-\n" . $q->end_time] =
                         $q->subject . "/" .
-                        $abbvr . "|" .
-                        $q->year . "|" .
-                        $q->division . "-" .
+                        $abbvr . "/" .
+                        // $q->year . "/" .
+                        // $q->division . "-" .
                         $q->batch . "/" .
                         $q->room;
                 }
             }
             array_push($print_data, $print_row);
         }
-        // return Response($print_data);
-
         //===============generating csv here==================
         //do not alter this part if you have no idea how it works
         //still if want to alter just remove everything and start from scartch
         //================generating csv here=================
         # Generate CSV data from array
         $file_name = $request->all()['params']['department'] . "_" . $request->all()['params']['year'] . "_" . $request->all()['params']['division'] . ".csv";
-        if (file_exists($file_name)) {
-            unlink($file_name);
+        $file_path = storage_path() . "/app/public/" . $file_name;
+        if (file_exists($file_path)) {
+            unlink($file_path);
         } else {
             // echo ("$file_pointer has been deleted");  
         }
-
-        $fh = fopen($file_name, 'a+'); # don't create a file, attempt
-        # to use memory instead
-        # write out the headers
+        // print_r($print_data);
+        $fh = fopen($file_path, 'a+');
+        fputcsv($fh, ["", "", "", "RAMRAO ADIK INSTITUTE OF TECHNOLOGY", "", "", "", $request->all()['params']['year']]);
+        fputcsv($fh, ["", "", "", "TIME TABLE FOR _SEM_ SEMESTER 2019-2020", "", "", "", $request->all()['params']['division']]);
         fputcsv($fh, array_keys(current($print_data)));
-        # write out the data
         foreach ($print_data as $row) {
             fputcsv($fh, $row);
+        }
+        $fac_name_abvr = array_unique($fac_name_abvr);
+        foreach ($fac_name_abvr as $row) {
+            fputcsv($fh, ["", "", $row]);
+        }
+        foreach ($courses as $course) {
+            fputcsv($fh, ["", "", "",$course->Subject_shortname.'  -  '.$course->Subject_name]);
         }
         rewind($fh);
         fclose($fh);
@@ -184,8 +199,8 @@ class time_table_controller extends Controller
         //=============================================
         //end of generating csv
         //=============================================
-
-        return \Response::download($file_name, 'time_table.csv', $headers);
+        return Storage::download($file_name, $file_name, $headers);
+        // return response("hello");
     }
 
     //give faculty curent time to principal
