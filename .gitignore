@@ -3,6 +3,7 @@
 /public/storage
 /public/new_csv.csv
 /storage/*.key
+/storage/app/public/
 /vendor
 .env
 .phpunit.result.cache
