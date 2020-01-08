@@ -220,6 +220,7 @@ class time_table_controller extends Controller
             ->where("year", $request->all()['params']['year'])
             ->where("department", $request->all()['params']['department'])
             ->get()->toArray();
+       // printr($courses);
         $time_slot = array();
         foreach ($days as $d) {
             $query = DB::connection($request->all()['college'])->table('time_table')
@@ -269,17 +270,13 @@ class time_table_controller extends Controller
                 if (array_key_exists($q->start_time . "-\n" . $q->end_time, $print_row)) {
                     $print_row[$q->start_time . "-\n" . $q->end_time] = $print_row[$q->start_time . "-\n" . $q->end_time] . "\n" .
                         $q->subject . "/" .
-                        $abbvr . "/" .
-                        // $q->year . "/" .
-                        // $q->division . "-" .
+                          $abbvr . "/" .
                         $q->batch . "/" .
                         $q->room;
                 } else {
                     $print_row[$q->start_time . "-\n" . $q->end_time] =
                         $q->subject . "/" .
                         $abbvr . "/" .
-                        // $q->year . "/" .
-                        // $q->division . "-" .
                         $q->batch . "/" .
                         $q->room;
                 }
@@ -293,8 +290,6 @@ class time_table_controller extends Controller
                     continue;
                 } else {
                     $pd[$t] = " ";
-                    // array_merge($pd, [$t => ""]);
-                    // print_r($pd);
                 }
             }
         }
@@ -318,13 +313,31 @@ class time_table_controller extends Controller
         foreach ($print_data as $row) {
             fputcsv($fh, $row);
         }
-        $fac_name_abvr = array_unique($fac_name_abvr);
-        foreach ($fac_name_abvr as $row) {
-            fputcsv($fh, ["", "", $row]);
+        $fac_name_abvr =(array) array_unique($fac_name_abvr);
+        $i=0;
+        $j=0;
+        $fac_name_abvr=(array)$fac_name_abvr;
+        $new_fac_abvr = array();
+        foreach($fac_name_abvr as $x){
+        array_push($new_fac_abvr,$x);
         }
-        foreach ($courses as $course) {
-            fputcsv($fh, ["", "", "", $course->Subject_shortname . '  -  ' . $course->Subject_name]);
+        $courses = (array) $courses;
+        $new_courses = array();
+        foreach ($courses as $x) {
+            array_push($new_courses, $x);
         }
+        while($i<sizeof($new_fac_abvr) && $j < sizeof($new_courses)){
+            fputcsv($fh, ["", "", $new_fac_abvr[$i+0], $new_fac_abvr[$i + 1] ,$new_courses[$j]->Subject_shortname . '  -  ' .$new_courses[$j]->Subject_name]);
+                $i++;
+                $j++;
+        }
+        // foreach ($fac_name_abvr as $row) {
+        //     fputcsv($fh, ["", "", $row]);
+        // }
+        // foreach ($courses as $course) {
+        //     fputcsv($fh, ["", "", "", $course->Subject_shortname . '  -  ' . $course->Subject_name]);
+        // }
+        fputcsv($fh, ["", "", "", "", "", ""]);
         fputcsv($fh, ["", "", "Head of Department", "", "", "Principal"]);
         rewind($fh);
         fclose($fh);
