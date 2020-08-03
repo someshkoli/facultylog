@@ -7,8 +7,13 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
 </p>
 
-## FacultyLog - [backend]{https://www.github.com/someshkoli/facultylog} [https://www.github.com/regalstreak/FacultyLog]{frontend}
-A Faculty management portal for university and colleges which keeps track of faculty schedules and monitors/views for a given time
+## FacultyLog 
+
+A Faculty management portal for university and colleges which keeps track of faculty schedules and monitors/views for a given time. Get frontend and backend here:
+
+[backend](https://www.github.com/someshkoli/facultylog)
+
+[frontend](https://www.github.com/regalstreak/FacultyLog)
 
 ## About Laravel
 
