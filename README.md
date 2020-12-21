@@ -11,6 +11,7 @@
 
 A Faculty management portal for university and colleges which keeps track of faculty schedules and monitors/views for a given time. Get frontend and backend here:
 
+To start the app, follow the instrcutions here https://gist.github.com/hootlex/da59b91c628a6688ceb1
 [backend](https://www.github.com/someshkoli/facultylog)
 
 [frontend](https://www.github.com/regalstreak/FacultyLog)
